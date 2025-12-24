@@ -1,0 +1,152 @@
+// backend/src/services/soapService.js
+const soap = require('soap');
+const fs = require('fs');
+const path = require('path');
+
+class OracleHCMService {
+    constructor() {
+        this.client = null;
+        this.wsdlUrl = process.env.SOAP_WSDL_URL;
+        this.credentials = {
+            username: process.env.ORACLE_USERNAME,
+            password: process.env.ORACLE_PASSWORD
+        };
+    }
+
+    async initializeClient() {
+        try {
+            const wsdlOptions = {
+                envelopeKey: 'soapenv',
+                overrideRootElement: {
+                    namespace: 'soapenv'
+                }
+            };
+
+            this.client = await soap.createClientAsync(
+                this.wsdlUrl,
+                wsdlOptions
+            );
+
+            // Add WS-Security headers
+            this.client.addSoapHeader(this.createSecurityHeader());
+            
+            return this.client;
+        } catch (error) {
+            console.error('SOAP Client Initialization Error:', error);
+            throw error;
+        }
+    }
+
+    createSecurityHeader() {
+        return {
+            'wsse:Security': {
+                '@soapenv:mustUnderstand': "1",
+                'wsse:UsernameToken': {
+                    'wsse:Username': this.credentials.username,
+                    'wsse:Password': {
+                        '@Type': 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText',
+                        '#text': this.credentials.password
+                    }
+                }
+            }
+        };
+    }
+
+    async getEmployees(params = {}) {
+        try {
+            if (!this.client) {
+                await this.initializeClient();
+            }
+
+            const soapRequest = {
+                EmployeeListInput: {
+                    'emp:ViewAll' : 'Y',
+                    'emp:EffectiveAsOfDate': new Date().toISOString().split('T')[0],
+                    ...params
+                }
+            };
+
+            const result = await this.client.findEmployeesAsync(soapRequest);
+            return this.parseSOAPResponse(result);
+        } catch (error) {
+            console.error('SOAP Error:', error);
+            throw new Error(`SOAP request failed: ${error.message}`);
+        }
+    }
+
+    async createEmployee(employeeData) {
+        try {
+            if (!this.client) {
+                await this.initializeClient();
+            }
+
+            const soapRequest = {
+                EmployeeInput: {
+                    'emp:PersonData': {
+                        'emp:LastName': employeeData.lastName,
+                        'emp:FirstName': employeeData.firstName,
+                        'emp:Email': employeeData.email,
+                        'emp:WorkPhone': employeeData.phone,
+                        'emp:DateOfBirth': employeeData.dob,
+                        'emp:Gender': employeeData.gender
+                    },
+                    'emp:AssignmentData': {
+                        'emp:BusinessUnit': employeeData.businessUnit,
+                        'emp:Department': employeeData.department,
+                        'emp:Job': employeeData.job,
+                        'emp:Location': employeeData.location,
+                        'emp:HireDate': employeeData.hireDate
+                    }
+                }
+            };
+
+            const result = await this.client.createEmployeeAsync(soapRequest);
+            return this.parseSOAPResponse(result);
+        } catch (error) {
+            console.error('Create Employee Error:', error);
+            throw error;
+        }
+    }
+
+    parseSOAPResponse(result) {
+        // Parse SOAP response and convert to JSON
+        const response = result[0];
+        
+        if (response.Fault) {
+            throw new Error(response.Fault.faultstring);
+        }
+
+        // Extract relevant data from SOAP response
+        const cleanResponse = this.extractData(response);
+        return cleanResponse;
+    }
+
+    extractData(soapObject) {
+        // Recursive function to clean SOAP response
+        if (typeof soapObject !== 'object' || soapObject === null) {
+            return soapObject;
+        }
+
+        const result = {};
+        for (const [key, value] of Object.entries(soapObject)) {
+            // Remove namespace prefixes
+            const cleanKey = key.replace(/.*:/, '');
+            
+            if (Array.isArray(value)) {
+                result[cleanKey] = value.map(item => this.extractData(item));
+            } else if (typeof value === 'object' && value !== null) {
+                // Check if it's a simple value object
+                if (value.$value !== undefined) {
+                    result[cleanKey] = value.$value;
+                } else {
+                    result[cleanKey] = this.extractData(value);
+                }
+            } else {
+                result[cleanKey] = value;
+            }
+        }
+        return result;
+    }
+}
+
+module.exports = new OracleHCMService();
