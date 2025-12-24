@@ -1,0 +1,83 @@
+// backend/src/controllers/hcmController.js
+const oracleService = require('../services/soapService');
+
+exports.getEmployees = async (req, res) => {
+    try {
+        const { department, limit = 50, offset = 0 } = req.query;
+        
+        const params = {};
+        if (department) {
+            params['emp:Department'] = department;
+        }
+        
+        const employees = await oracleService.getEmployees(params);
+        
+        // Paginate results
+        const paginatedResults = {
+            total: employees.length,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            data: employees.slice(offset, offset + limit)
+        };
+        
+        res.json(paginatedResults);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch employees',
+            details: error.message
+        });
+    }
+};
+
+exports.createEmployee = async (req, res) => {
+    try {
+        const employeeData = req.body;
+        
+        // Validate required fields
+        const requiredFields = ['lastName', 'firstName', 'email', 'businessUnit'];
+        for (const field of requiredFields) {
+            if (!employeeData[field]) {
+                return res.status(400).json({
+                    error: `Missing required field: ${field}`
+                });
+            }
+        }
+        
+        const result = await oracleService.createEmployee(employeeData);
+        
+        res.status(201).json({
+            message: 'Employee created successfully',
+            data: result,
+            employeeId: result.EmployeeId
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to create employee',
+            details: error.message
+        });
+    }
+};
+
+exports.getEmployeeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const employees = await oracleService.getEmployees();
+        
+        const employee = employees.find(emp => 
+            emp.EmployeeNumber === id || emp.PersonId === id
+        );
+        
+        if (!employee) {
+            return res.status(404).json({
+                error: 'Employee not found'
+            });
+        }
+        
+        res.json(employee);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch employee',
+            details: error.message
+        });
+    }
+};
