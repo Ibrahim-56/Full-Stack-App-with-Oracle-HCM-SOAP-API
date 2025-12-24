@@ -1,0 +1,18 @@
+# deploy.sh
+#!/bin/bash
+
+# Build and deploy script
+
+echo "Building Docker images..."
+docker-compose build
+
+echo "Starting services..."
+docker-compose up -d
+
+echo "Checking services..."
+sleep 10
+docker-compose ps
+
+echo "Deployment complete!"
+echo "Frontend: http://localhost:3000"
+echo "Backend API: http://localhost:5000"
