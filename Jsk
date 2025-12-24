@@ -1,0 +1,153 @@
+// frontend/src/components/EmployeeList.jsx
+import React, { useState, useEffect } from 'react';
+import {
+    DataGrid,
+    GridToolbar,
+    GridActionsCellItem
+} from '@mui/x-data-grid';
+import {
+    Button,
+    Container,
+    Paper,
+    Typography,
+    Box,
+    Chip,
+    CircularProgress,
+    Alert
+} from '@mui/material';
+import { Visibility, Edit, Delete } from '@mui/icons-material';
+import { hcmApi } from '../services/api';
+
+const EmployeeList = () => {
+    const [employees, setEmployees] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [paginationModel, setPaginationModel] = useState({
+        page: 0,
+        pageSize: 10,
+    });
+
+    const fetchEmployees = async () => {
+        try {
+            setLoading(true);
+            const response = await hcmApi.getEmployees({
+                limit: paginationModel.pageSize,
+                offset: paginationModel.page * paginationModel.pageSize
+            });
+            setEmployees(response.data.data || []);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchEmployees();
+    }, [paginationModel]);
+
+    const columns = [
+        { field: 'EmployeeNumber', headerName: 'Employee ID', width: 150 },
+        { field: 'FirstName', headerName: 'First Name', width: 150 },
+        { field: 'LastName', headerName: 'Last Name', width: 150 },
+        { field: 'Email', headerName: 'Email', width: 200 },
+        { field: 'Department', headerName: 'Department', width: 180 },
+        { field: 'Job', headerName: 'Job Title', width: 180 },
+        { field: 'Location', headerName: 'Location', width: 150 },
+        { field: 'HireDate', headerName: 'Hire Date', width: 150 },
+        {
+            field: 'Status',
+            headerName: 'Status',
+            width: 120,
+            renderCell: (params) => (
+                <Chip
+                    label={params.value}
+                    color={params.value === 'Active' ? 'success' : 'default'}
+                    size="small"
+                />
+            )
+        },
+        {
+            field: 'actions',
+            type: 'actions',
+            headerName: 'Actions',
+            width: 100,
+            getActions: (params) => [
+                <GridActionsCellItem
+                    icon={<Visibility />}
+                    label="View"
+                    onClick={() => handleView(params.row.EmployeeNumber)}
+                />,
+                <GridActionsCellItem
+                    icon={<Edit />}
+                    label="Edit"
+                    onClick={() => handleEdit(params.row.EmployeeNumber)}
+                />,
+            ],
+        },
+    ];
+
+    const handleView = (employeeId) => {
+        // Navigate to employee detail
+        window.location.href = `/employees/${employeeId}`;
+    };
+
+    const handleEdit = (employeeId) => {
+        // Navigate to edit form
+        window.location.href = `/employees/${employeeId}/edit`;
+    };
+
+    if (error) {
+        return (
+            <Container>
+                <Alert severity="error" sx={{ mt: 2 }}>
+                    Error loading employees: {error}
+                </Alert>
+            </Container>
+        );
+    }
+
+    return (
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+            <Paper sx={{ p: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                    <Typography variant="h5" component="h1">
+                        Employee Directory
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => window.location.href = '/employees/new'}
+                    >
+                        Add Employee
+                    </Button>
+                </Box>
+
+                {loading ? (
+                    <Box display="flex" justifyContent="center" p={3}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <div style={{ height: 600, width: '100%' }}>
+                        <DataGrid
+                            rows={employees}
+                            columns={columns}
+                            paginationModel={paginationModel}
+                            onPaginationModelChange={setPaginationModel}
+                            pageSizeOptions={[10, 25, 50, 100]}
+                            slots={{ toolbar: GridToolbar }}
+                            slotProps={{
+                                toolbar: {
+                                    showQuickFilter: true,
+                                },
+                            }}
+                            getRowId={(row) => row.EmployeeNumber || row.PersonId}
+                        />
+                    </div>
+                )}
+            </Paper>
+        </Container>
+    );
+};
+
+export default EmployeeList;
