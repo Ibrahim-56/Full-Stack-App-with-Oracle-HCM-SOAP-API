@@ -1,0 +1,51 @@
+// backend/src/utils/logger.js
+const winston = require('winston');
+const path = require('path');
+
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({ 
+            filename: path.join(__dirname, '../../logs/error.log'), 
+            level: 'error' 
+        }),
+        new winston.transports.File({ 
+            filename: path.join(__dirname, '../../logs/combined.log') 
+        }),
+        new winston.transports.Console({
+            format: winston.format.simple()
+        })
+    ],
+});
+
+// SOAP request logger
+const soapLogger = {
+    logRequest: (method, url, request) => {
+        logger.info('SOAP Request', {
+            method,
+            url,
+            request: JSON.stringify(request).substring(0, 1000)
+        });
+    },
+    
+    logResponse: (method, response) => {
+        logger.info('SOAP Response', {
+            method,
+            responseLength: response.length
+        });
+    },
+    
+    logError: (method, error) => {
+        logger.error('SOAP Error', {
+            method,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+};
+
+module.exports = { logger, soapLogger };
