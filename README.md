@@ -1,26 +1,24 @@
-# Oracle HCM SOAP API Application
+# Oracle HCM SOAP API Integration — Configuration Notes
 
-A prototype exploring how a web application can communicate with Oracle HCM through SOAP services. The exact requests, authentication method, and response mapping depend on the target Oracle HCM environment and its WSDL.
+This repository currently contains configuration and deployment-related artifacts with filenames referencing JavaScript, Bash, Docker, Nginx, environment settings, and YAML. The application source code and dependency manifests needed to reproduce the full-stack application described in earlier notes are not present in the current repository snapshot.
 
-## Integration considerations
+## Intended integration area
 
-- Configure the WSDL endpoint for the target Oracle HCM instance.
-- Use the authentication method required by that environment, such as WS-Security where applicable.
-- Map SOAP responses to the application's expected data model.
-- Handle service errors and timeouts explicitly.
-- Keep credentials and environment-specific values out of source control.
+The original project notes describe a web application intended to communicate with Oracle HCM through SOAP services. A real integration depends on the target Oracle HCM environment, WSDL, authentication configuration, and response mapping.
 
-## Local endpoints mentioned in the original project notes
+## Current status
 
-- Frontend: `http://localhost:3000`
-- Backend endpoint: `http://localhost:5000/api/hcm/employees`
+- The repository does not currently contain a verifiable frontend/backend source tree.
+- There is no package manifest or documented reproducible build procedure in the repository root.
+- The previously mentioned local endpoints are not evidence that the application starts.
+- No successful Oracle HCM connection or end-to-end test is documented.
 
-These are documented target endpoints, not a confirmation that the application currently starts or that the Oracle integration has been tested.
+## To make this a reproducible portfolio project
 
-## Before running
+1. Restore the frontend and backend source code.
+2. Add dependency manifests and setup instructions.
+3. Provide a safe example environment file without credentials.
+4. Document SOAP request and response handling against a permitted test environment.
+5. Add automated tests for request construction, response parsing, and error handling.
 
-The current repository documentation does not provide a verified dependency installation or startup procedure. Check the application source and dependency manifests, configure the required environment values, and test against an authorized Oracle HCM environment before relying on the integration.
-
-## Security
-
-Do not commit real credentials, tokens, WSDL secrets, or customer data. Use environment variables or a local untracked configuration file, and apply the access controls required by the target environment.
+Do not commit credentials, tokens, private WSDL URLs, or customer data. Until the source is restored and tested, treat this repository as incomplete integration notes rather than a runnable application.
